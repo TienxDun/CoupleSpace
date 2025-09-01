@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "317157362937",
+    "project_id": "couplespace-2f532",
+    "storage_bucket": "couplespace-2f532.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:317157362937:android:73cb290159737342bce628",
+        "android_client_info": {
+          "package_name": "com.yourname.couplespace"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "317157362937-8gso0s673bp68c5dkbaig3pqko59duf4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yourname.couplespace",
+            "certificate_hash": "ccb3ab2a5de75eb30f0abf916d7f852895e977f3"
+          }
+        },
+        {
+          "client_id": "317157362937-lre08rkuk51hcnp0vbeatndlpscbdu8q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFx1YOoFVZsJzcDO8idFYxIikIczKWvdc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "317157362937-lre08rkuk51hcnp0vbeatndlpscbdu8q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
