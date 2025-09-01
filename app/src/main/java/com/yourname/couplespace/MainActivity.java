@@ -22,6 +22,17 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.GoogleAuthProvider;
 
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.firestore.FieldValue;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+
 public class MainActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private ActivityResultLauncher<Intent> signInLauncher;
@@ -53,8 +64,15 @@ public class MainActivity extends AppCompatActivity {
                             String idToken = account.getIdToken();
                             AuthCredential cred = GoogleAuthProvider.getCredential(idToken, null);
                             auth.signInWithCredential(cred)
-                                    .addOnSuccessListener(r -> toast("Đăng nhập Google OK"))
+                                    .addOnSuccessListener(r -> {
+                                        toast("Đăng nhập Google OK");
+                                        ensureUserProfile();   // ✅ tạo/ghi users/{uid}
+                                        refreshFcmToken();     // ✅ lưu fcmToken (dùng cho thông báo sau này)
+                                        // TODO: nếu users/{uid}.coupleId != null -> chuyển sang HomeActivity
+                                        goNext();  // <-- chuyển màn
+                                    })
                                     .addOnFailureListener(e -> toast("Firebase auth lỗi: " + e.getMessage()));
+
                         } catch (ApiException e) {
                             toast("Google sign-in lỗi: " + e.getMessage());
                         }
@@ -74,5 +92,46 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });*/
     }
+
+    private void ensureUserProfile() {
+        FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
+        if (u == null) return;
+
+        Map<String, Object> doc = new HashMap<>();
+        doc.put("displayName", u.getDisplayName());
+        doc.put("email", u.getEmail());
+        doc.put("photoUrl", (u.getPhotoUrl() != null ? u.getPhotoUrl().toString() : null));
+        doc.put("updatedAt", FieldValue.serverTimestamp());
+
+        FirebaseFirestore.getInstance()
+                .collection("users").document(u.getUid())
+                .set(doc, SetOptions.merge()); // tạo mới hoặc cập nhật
+    }
+
+    private void refreshFcmToken() {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
+                    if (u == null) return;
+                    FirebaseFirestore.getInstance()
+                            .collection("users").document(u.getUid())
+                            .set(Collections.singletonMap("fcmToken", token), SetOptions.merge());
+                });
+    }
+    private void goNext() {
+        FirebaseUser u = FirebaseAuth.getInstance().getCurrentUser();
+        if (u == null) return;
+        FirebaseFirestore.getInstance().collection("users").document(u.getUid()).get()
+                .addOnSuccessListener(snap -> {
+                    String coupleId = snap.getString("coupleId");
+                    if (coupleId == null) {
+                        startActivity(new Intent(this, PairActivity.class));
+                    } else {
+                        startActivity(new Intent(this, HomeActivity.class));
+                    }
+                    finish();
+                });
+    }
+
     private void toast(String s){ Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
 }
