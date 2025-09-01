@@ -1,69 +1,344 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="#F8F9FA">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:orientation="vertical"
-        android:padding="16dp"
+        android:padding="20dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/txtTitle"
-            android:text="Câu hỏi hôm nay"
-            android:textStyle="bold"
-            android:textSize="24sp"
-            android:textColor="#2C3E50"
+        <!--Header Section-->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:gravity="center"
+            android:layout_marginBottom="24dp">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_heart"
+                android:tint="#E91E63"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/txtTitle"
+                android:text="💕 Câu hỏi hôm nay"
+                android:textStyle="bold"
+                android:textSize="28sp"
+                android:textColor="#2C3E50"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:text="Khám phá nhau qua từng ngày"
+                android:textSize="16sp"
+                android:textColor="#7F8C8D"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
+        <!--Loading Progress Bar-->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="50dp"
+            android:layout_marginBottom="50dp"
+            android:indeterminateTint="#E91E63"
+            android:visibility="visible" />
+
+        <!--Question Card-->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardQuestion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp" />
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/txtQuestion"
-            android:text="Đang tải câu hỏi..."
-            android:textSize="18sp"
-            android:textColor="#34495E"
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/iconQuestion"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_help_outline"
+                        android:tint="#FF9800"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtQuestionLabel"
+                        android:text="Câu hỏi hôm nay"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="#2C3E50"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txtQuestion"
+                    android:text="Đang tải câu hỏi..."
+                    android:textSize="16sp"
+                    android:textColor="#34495E"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/question_background"
+                    android:padding="16dp" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!--My Answer Card-->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardAnswer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:visibility="gone">
 
-        <EditText
-            android:id="@+id/edtAnswer"
-            android:hint="Câu trả lời của bạn..."
-            android:minHeight="48dp"
-            android:padding="12dp"
-            android:textSize="16sp"
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/iconMyAnswer"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_edit"
+                        android:tint="#2196F3"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtMyAnswerLabel"
+                        android:text="Câu trả lời của bạn"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="#2C3E50"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/edtAnswer"
+                    android:hint="Chia sẻ suy nghĩ của bạn..."
+                    android:minHeight="120dp"
+                    android:padding="16dp"
+                    android:textSize="16sp"
+                    android:textColor="#2C3E50"
+                    android:textColorHint="#95A5A6"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/edittext_background"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:maxLines="6"
+                    android:scrollbars="vertical" />
+
+                <Button
+                    android:id="@+id/btnSaveAnswer"
+                    android:text="💾 Lưu câu trả lời"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/button_primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:elevation="4dp" />
+                <Button
+                    android:id="@+id/btnReroll"
+                    android:text="🔄 Đổi câu hỏi hôm nay"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/button_primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="10dp"
+                    android:elevation="4dp" />
+
+                <TextView
+                    android:id="@+id/txtMyAnswerStatus"
+                    android:text=""
+                    android:textSize="14sp"
+                    android:textColor="#27AE60"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    android:drawablePadding="8dp" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!--Partner Answer Card-->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardPartnerAnswer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:visibility="gone">
 
-        <Button
-            android:id="@+id/btnSaveAnswer"
-            android:text="💾 Lưu câu trả lời"
-            android:layout_width="match_parent"
-            android:layout_height="56dp" />
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/txtMyAnswerStatus"
-            android:text=""
-            android:textSize="14sp"
-            android:textColor="#7F8C8D"
-            android:gravity="center"
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/iconPartnerAnswer"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_favorite"
+                        android:tint="#E91E63"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtPartnerAnswerLabel"
+                        android:text="Câu trả lời của người kia"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="#2C3E50"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txtPartnerAnswer"
+                    android:text="Câu trả lời của người kia sẽ hiện ở đây"
+                    android:textSize="16sp"
+                    android:textColor="#E65100"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/partner_answer_background"
+                    android:padding="16dp"
+                    android:minHeight="80dp" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!--History Card-->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardHistory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:visibility="gone"/>
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/txtPartnerAnswer"
-            android:text="Câu trả lời của người kia sẽ hiện ở đây"
-            android:textSize="18sp"
-            android:textColor="#E65100"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp" />
+            <LinearLayout
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/iconHistory"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_history"
+                        android:tint="#9C27B0"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtHistoryLabel"
+                        android:text="Lịch sử 7 ngày"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="#2C3E50"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txtHistory"
+                    android:text="Đang tải lịch sử..."
+                    android:textSize="14sp"
+                    android:textColor="#5D4E75"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/history_background"
+                    android:padding="16dp"
+                    android:fontFamily="monospace" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
+
 </ScrollView>
