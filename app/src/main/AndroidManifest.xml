@@ -15,7 +15,6 @@
         android:theme="@style/Theme.CoupleSpace">
         <activity android:name=".PairActivity" />
         <activity android:name=".HomeActivity" />
-
         <activity
             android:name=".MainActivity"
             android:exported="true">

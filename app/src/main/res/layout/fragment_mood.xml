@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtToday"
+            android:text="Mood hôm nay"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <RadioGroup
+            android:id="@+id/emojiGroup"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <RadioButton android:id="@+id/emojiHappy"   android:text="😊"/>
+            <RadioButton android:id="@+id/emojiNeutral" android:text="😐"/>
+            <RadioButton android:id="@+id/emojiSad"     android:text="😢"/>
+            <RadioButton android:id="@+id/emojiAngry"   android:text="😠"/>
+            <RadioButton android:id="@+id/emojiLove"    android:text="🥰"/>
+        </RadioGroup>
+
+        <EditText
+            android:id="@+id/edtNote"
+            android:hint="Ghi chú ngắn..."
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"/>
+
+        <Button
+            android:id="@+id/btnSaveMood"
+            android:text="Lưu Mood"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"/>
+
+        <TextView
+            android:id="@+id/txtPartnerMood"
+            android:text="Mood người kia hôm nay: ..."
+            android:layout_marginTop="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <TextView
+            android:id="@+id/txtHistory"
+            android:text="7 ngày gần nhất:"
+            android:layout_marginTop="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+</ScrollView>
