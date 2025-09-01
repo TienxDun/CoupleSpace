@@ -1,7 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:padding="24dp">
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="DailyQ Fragment (đang rỗng)"/>
-</FrameLayout>
+    android:background="#F8F9FA">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtTitle"
+            android:text="Câu hỏi hôm nay"
+            android:textStyle="bold"
+            android:textSize="24sp"
+            android:textColor="#2C3E50"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp" />
+
+        <TextView
+            android:id="@+id/txtQuestion"
+            android:text="Đang tải câu hỏi..."
+            android:textSize="18sp"
+            android:textColor="#34495E"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
+        <EditText
+            android:id="@+id/edtAnswer"
+            android:hint="Câu trả lời của bạn..."
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:textSize="16sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnSaveAnswer"
+            android:text="💾 Lưu câu trả lời"
+            android:layout_width="match_parent"
+            android:layout_height="56dp" />
+
+        <TextView
+            android:id="@+id/txtMyAnswerStatus"
+            android:text=""
+            android:textSize="14sp"
+            android:textColor="#7F8C8D"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/txtPartnerAnswer"
+            android:text="Câu trả lời của người kia sẽ hiện ở đây"
+            android:textSize="18sp"
+            android:textColor="#E65100"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" />
+
+    </LinearLayout>
+</ScrollView>
