@@ -36,6 +36,10 @@ public class DailyQFragment extends Fragment {
     private CardView cardQuestion, cardAnswer, cardPartnerAnswer, cardHistory;
     private ImageView iconMyAnswer, iconPartnerAnswer;
 
+    // State management
+    private boolean isDataLoaded = false;
+    private String currentAnswer;
+
     // Ngân hàng câu hỏi local
     private static final String[] BANK = new String[] {
             "Nếu được đi đâu đó cùng nhau ngay ngày mai, bạn muốn đi đâu?",
@@ -79,9 +83,26 @@ public class DailyQFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
-        db = FirebaseFirestore.getInstance();
-        me = FirebaseAuth.getInstance().getCurrentUser();
+        super.onViewCreated(v, s);
+        
+        // Initialize Firebase only if not already done
+        if (db == null) {
+            db = FirebaseFirestore.getInstance();
+        }
+        if (me == null) {
+            me = FirebaseAuth.getInstance().getCurrentUser();
+        }
 
+        initViews(v);
+        restoreState(s);
+
+        // Only initialize data if not already loaded
+        if (!isDataLoaded) {
+            initializeData();
+        }
+    }
+
+    private void initViews(@NonNull View v) {
         // Bind view tối thiểu
         txtQuestion       = v.findViewById(R.id.txtQuestion);
         txtPartnerAnswer  = v.findViewById(R.id.txtPartnerAnswer);
@@ -99,12 +120,43 @@ public class DailyQFragment extends Fragment {
 
         v.findViewById(R.id.btnSaveAnswer).setOnClickListener(x -> saveAnswer());
         v.findViewById(R.id.btnReroll).setOnClickListener(x -> rerollQuestionNow());
+        
+        // Restore answer if available
+        if (currentAnswer != null && edtAnswer != null) {
+            edtAnswer.setText(currentAnswer);
+        }
+    }
 
+    private void restoreState(@Nullable Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            isDataLoaded = savedInstanceState.getBoolean("isDataLoaded", false);
+            coupleId = savedInstanceState.getString("coupleId");
+            partnerUid = savedInstanceState.getString("partnerUid");
+            currentAnswer = savedInstanceState.getString("currentAnswer");
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("isDataLoaded", isDataLoaded);
+        if (coupleId != null) outState.putString("coupleId", coupleId);
+        if (partnerUid != null) outState.putString("partnerUid", partnerUid);
+        if (edtAnswer != null && edtAnswer.getText() != null) {
+            outState.putString("currentAnswer", edtAnswer.getText().toString());
+        }
+    }
+
+    private void initializeData() {
+        if (!isAdded() || getContext() == null) return;
+        
         showLoadingState();
 
         // Lấy coupleId → xác định partner → khởi chạy
         db.collection("users").document(me.getUid()).get()
                 .addOnSuccessListener(u -> {
+                    if (!isAdded()) return; // Check if fragment is still attached
+                    
                     coupleId = u.getString("coupleId");
                     if (TextUtils.isEmpty(coupleId)) {
                         showErrorState("Bạn chưa thuộc cặp nào");
@@ -112,7 +164,10 @@ public class DailyQFragment extends Fragment {
                     }
                     fetchPartnerThenStart();
                 })
-                .addOnFailureListener(e -> showErrorState("Lỗi đọc user: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    showErrorState("Lỗi đọc user: " + e.getMessage());
+                });
     }
 
     private void showLoadingState() {
@@ -139,7 +194,11 @@ public class DailyQFragment extends Fragment {
     }
 
     // ===== Helpers =====
-    private void toast(String s) { Toast.makeText(requireContext(), s, Toast.LENGTH_SHORT).show(); }
+    private void toast(String s) { 
+        if (isAdded() && getContext() != null) {
+            Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show(); 
+        }
+    }
 
     private String todayId() {
         java.util.TimeZone tz = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
@@ -164,8 +223,12 @@ public class DailyQFragment extends Fragment {
 
     // ===== Flow chính =====
     private void fetchPartnerThenStart() {
+        if (!isAdded()) return;
+        
         db.collection("couples").document(coupleId).get()
                 .addOnSuccessListener(cpl -> {
+                    if (!isAdded()) return;
+                    
                     List<String> members = (List<String>) cpl.get("members");
                     if (members != null) {
                         for (String uid : members) if (!uid.equals(me.getUid())) partnerUid = uid;
@@ -174,12 +237,20 @@ public class DailyQFragment extends Fragment {
                     preloadMyAnswerIfAny();
                     loadHistory7days();
                     showContent();
+                    isDataLoaded = true; // Mark data as loaded
                 })
-                .addOnFailureListener(e -> showErrorState("Lỗi đọc couple: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    showErrorState("Lỗi đọc couple: " + e.getMessage());
+                });
     }
 
     private void ensureTodayQuestionThenListen() {
+        if (!isAdded()) return;
+        
         todayDoc().get().addOnSuccessListener(snap -> {
+            if (!isAdded()) return;
+            
             if (!snap.exists() || TextUtils.isEmpty(snap.getString("question"))) {
                 Map<String,Object> data = new HashMap<>();
                 data.put("question", pickQuestionDeterministic());
@@ -191,18 +262,33 @@ public class DailyQFragment extends Fragment {
     }
 
     private void watchToday() {
-        if (todayListener != null) todayListener.remove();
+        if (!isAdded()) return;
+        
+        // Remove existing listener to prevent duplicates
+        if (todayListener != null) {
+            todayListener.remove();
+            todayListener = null;
+        }
+        
         todayListener = todayDoc().addSnapshotListener((snap, e) -> {
-            if (e != null) { txtQuestion.setText("Lỗi quyền/kết nối"); return; }
-            if (snap == null || !snap.exists()) { txtQuestion.setText("Chưa có câu hỏi"); return; }
+            if (!isAdded()) return; // Check if fragment is still attached
+            
+            if (e != null) { 
+                if (txtQuestion != null) txtQuestion.setText("Lỗi quyền/kết nối"); 
+                return; 
+            }
+            if (snap == null || !snap.exists()) { 
+                if (txtQuestion != null) txtQuestion.setText("Chưa có câu hỏi"); 
+                return; 
+            }
 
             String q = snap.getString("question");
             if (TextUtils.isEmpty(q)) q = pickQuestionDeterministic();
-            txtQuestion.setText(q);
+            if (txtQuestion != null) txtQuestion.setText(q);
 
             Map<String,Object> answers = (Map<String,Object>) snap.get("answers");
             if (answers == null || answers.isEmpty()) {
-                txtPartnerAnswer.setText("Người kia chưa trả lời.");
+                if (txtPartnerAnswer != null) txtPartnerAnswer.setText("Người kia chưa trả lời.");
                 updatePartnerAnswerStatus(false);
                 return;
             }
@@ -217,22 +303,26 @@ public class DailyQFragment extends Fragment {
             if (!TextUtils.isEmpty(targetUid) && answers.get(targetUid) instanceof Map) {
                 Object text = ((Map<?,?>)answers.get(targetUid)).get("text");
                 boolean hasAnswer = text != null && !String.valueOf(text).trim().isEmpty();
-                txtPartnerAnswer.setText(hasAnswer ? String.valueOf(text) : "Người kia chưa trả lời.");
+                if (txtPartnerAnswer != null) {
+                    txtPartnerAnswer.setText(hasAnswer ? String.valueOf(text) : "Người kia chưa trả lời.");
+                }
                 updatePartnerAnswerStatus(hasAnswer);
             } else {
-                txtPartnerAnswer.setText("Người kia chưa trả lời.");
+                if (txtPartnerAnswer != null) txtPartnerAnswer.setText("Người kia chưa trả lời.");
                 updatePartnerAnswerStatus(false);
             }
         });
     }
 
     private void updatePartnerAnswerStatus(boolean hasAnswer) {
+        if (!isAdded() || getContext() == null || iconPartnerAnswer == null || cardPartnerAnswer == null) return;
+        
         if (hasAnswer) {
-            iconPartnerAnswer.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.holo_green_dark));
-            cardPartnerAnswer.setCardBackgroundColor(ContextCompat.getColor(requireContext(), android.R.color.holo_green_light));
+            iconPartnerAnswer.setColorFilter(ContextCompat.getColor(getContext(), android.R.color.holo_green_dark));
+            cardPartnerAnswer.setCardBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.holo_green_light));
         } else {
-            iconPartnerAnswer.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.darker_gray));
-            cardPartnerAnswer.setCardBackgroundColor(ContextCompat.getColor(requireContext(), android.R.color.white));
+            iconPartnerAnswer.setColorFilter(ContextCompat.getColor(getContext(), android.R.color.darker_gray));
+            cardPartnerAnswer.setCardBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.white));
         }
     }
 
@@ -255,22 +345,34 @@ public class DailyQFragment extends Fragment {
     }
 
     private void updateMyAnswerStatus(boolean hasAnswer) {
+        if (!isAdded() || getContext() == null || iconMyAnswer == null || cardAnswer == null) return;
+        
         if (hasAnswer) {
-            iconMyAnswer.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.holo_blue_dark));
-            cardAnswer.setCardBackgroundColor(ContextCompat.getColor(requireContext(), android.R.color.holo_blue_light));
+            iconMyAnswer.setColorFilter(ContextCompat.getColor(getContext(), android.R.color.holo_blue_dark));
+            cardAnswer.setCardBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.holo_blue_light));
         } else {
-            iconMyAnswer.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.darker_gray));
-            cardAnswer.setCardBackgroundColor(ContextCompat.getColor(requireContext(), android.R.color.white));
+            iconMyAnswer.setColorFilter(ContextCompat.getColor(getContext(), android.R.color.darker_gray));
+            cardAnswer.setCardBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.white));
         }
     }
 
     private void saveAnswer() {
+        if (!isAdded() || edtAnswer == null) return;
+        
         String ans = edtAnswer.getText().toString().trim();
         if (TextUtils.isEmpty(ans)) { toast("Nhập câu trả lời"); return; }
 
-        Button btnSave = requireView().findViewById(R.id.btnSaveAnswer);
+        View view = getView();
+        if (view == null) return;
+        
+        Button btnSave = view.findViewById(R.id.btnSaveAnswer);
+        if (btnSave == null) return;
+        
         btnSave.setEnabled(false);
         btnSave.setText("Đang lưu...");
+        
+        // Save current answer to state
+        currentAnswer = ans;
 
         Map<String,Object> entry = new HashMap<>();
         entry.put("text", ans);
@@ -283,17 +385,27 @@ public class DailyQFragment extends Fragment {
 
         todayDoc().set(data, SetOptions.merge())
                 .addOnSuccessListener(v -> {
+                    if (!isAdded()) return;
+                    
                     toast("✅ Đã lưu thành công!");
-                    txtMyAnswerStatus.setText("✅ Đã lưu câu trả lời");
-                    txtMyAnswerStatus.setVisibility(View.VISIBLE);
+                    if (txtMyAnswerStatus != null) {
+                        txtMyAnswerStatus.setText("✅ Đã lưu câu trả lời");
+                        txtMyAnswerStatus.setVisibility(View.VISIBLE);
+                    }
                     updateMyAnswerStatus(true);
-                    btnSave.setEnabled(true);
-                    btnSave.setText("💾 Cập nhật câu trả lời");
+                    if (btnSave != null) {
+                        btnSave.setEnabled(true);
+                        btnSave.setText("💾 Cập nhật câu trả lời");
+                    }
                 })
                 .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    
                     toast("❌ Lỗi: " + e.getMessage());
-                    btnSave.setEnabled(true);
-                    btnSave.setText("💾 Lưu câu trả lời");
+                    if (btnSave != null) {
+                        btnSave.setEnabled(true);
+                        btnSave.setText("💾 Lưu câu trả lời");
+                    }
                 });
     }
 
