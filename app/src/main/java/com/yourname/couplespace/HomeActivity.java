@@ -12,7 +12,7 @@ import com.yourname.couplespace.ui.QuizFragment;
 public class HomeActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.home_activity);
+        setContentView(R.layout.activity_home);
         setTitle("Home");
 
         BottomNavigationView nav = findViewById(R.id.bottomNav);
