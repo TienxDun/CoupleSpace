@@ -327,17 +327,27 @@ public class DailyQFragment extends Fragment {
     }
 
     private void preloadMyAnswerIfAny() {
+        if (!isAdded()) return;
+        
         todayDoc().get().addOnSuccessListener(snap -> {
-            if (!snap.exists()) return;
+            if (!isAdded() || !snap.exists()) return;
+            
             Map<String,Object> answers = (Map<String,Object>) snap.get("answers");
             if (answers == null) return;
             Object mine = answers.get(me.getUid());
             if (mine instanceof Map) {
                 Object txt = ((Map<?,?>) mine).get("text");
                 if (txt != null) {
-                    edtAnswer.setText(String.valueOf(txt));
-                    txtMyAnswerStatus.setText("✅ Đã lưu câu trả lời");
-                    txtMyAnswerStatus.setVisibility(View.VISIBLE);
+                    String answerText = String.valueOf(txt);
+                    currentAnswer = answerText; // Save to state
+                    
+                    if (edtAnswer != null) {
+                        edtAnswer.setText(answerText);
+                    }
+                    if (txtMyAnswerStatus != null) {
+                        txtMyAnswerStatus.setText("✅ Đã lưu câu trả lời");
+                        txtMyAnswerStatus.setVisibility(View.VISIBLE);
+                    }
                     updateMyAnswerStatus(true);
                 }
             }
@@ -410,7 +420,14 @@ public class DailyQFragment extends Fragment {
     }
 
     private void rerollQuestionNow() {
-        final Button btn = requireView().findViewById(R.id.btnReroll);
+        if (!isAdded()) return;
+        
+        View view = getView();
+        if (view == null) return;
+        
+        final Button btn = view.findViewById(R.id.btnReroll);
+        if (btn == null) return;
+        
         btn.setEnabled(false);
         btn.setText("Đang đổi...");
 
@@ -433,21 +450,40 @@ public class DailyQFragment extends Fragment {
             tr.set(doc, updates, SetOptions.merge());
             return null;
         }).addOnSuccessListener(v -> {
+            if (!isAdded()) return;
+            
             toast("✅ Đã đổi câu hỏi!");
-            edtAnswer.setText("");
-            txtMyAnswerStatus.setText("");
-            txtMyAnswerStatus.setVisibility(View.GONE);
+            
+            // Clear current answer state
+            currentAnswer = null;
+            
+            if (edtAnswer != null) {
+                edtAnswer.setText("");
+            }
+            if (txtMyAnswerStatus != null) {
+                txtMyAnswerStatus.setText("");
+                txtMyAnswerStatus.setVisibility(View.GONE);
+            }
             updateMyAnswerStatus(false);
-            btn.setEnabled(true);
-            btn.setText("🔄 Đổi câu hỏi hôm nay");
+            
+            if (btn != null) {
+                btn.setEnabled(true);
+                btn.setText("🔄 Đổi câu hỏi hôm nay");
+            }
         }).addOnFailureListener(e -> {
+            if (!isAdded()) return;
+            
             toast("❌ Lỗi đổi câu hỏi: " + e.getMessage());
-            btn.setEnabled(true);
-            btn.setText("🔄 Đổi câu hỏi hôm nay");
+            if (btn != null) {
+                btn.setEnabled(true);
+                btn.setText("🔄 Đổi câu hỏi hôm nay");
+            }
         });
     }
 
     private void loadHistory7days() {
+        if (!isAdded()) return;
+        
         java.util.TimeZone tz = java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
         java.text.SimpleDateFormat idFmt = new java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault());
         idFmt.setTimeZone(tz);
@@ -466,6 +502,8 @@ public class DailyQFragment extends Fragment {
                 .whereIn(FieldPath.documentId(), ids)
                 .get()
                 .addOnSuccessListener(snaps -> {
+                    if (!isAdded()) return;
+                    
                     java.util.List<DocumentSnapshot> list = new java.util.ArrayList<>(snaps.getDocuments());
                     list.sort((a,b) -> b.getId().compareTo(a.getId())); // mới → cũ
 
@@ -512,9 +550,15 @@ public class DailyQFragment extends Fragment {
                         sb.append(mineStatus).append(" Bạn: ").append(mine).append("\n");
                         sb.append(partnerStatus).append(" Người kia: ").append(partner).append("\n\n");
                     }
-                    txtHistory.setText(sb.toString());
+                    
+                    if (txtHistory != null) {
+                        txtHistory.setText(sb.toString());
+                    }
                 })
-                .addOnFailureListener(e -> txtHistory.setText("❌ Không tải được lịch sử: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded() || txtHistory == null) return;
+                    txtHistory.setText("❌ Không tải được lịch sử: " + e.getMessage());
+                });
     }
 
     private String shorten(String s) {
