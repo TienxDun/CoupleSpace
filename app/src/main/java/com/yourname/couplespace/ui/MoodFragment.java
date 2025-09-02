@@ -45,6 +45,11 @@ public class MoodFragment extends Fragment {
     private EditText edtNote;
     private TextView txtPartnerMood, txtHistory, txtToday, txtPartnerName, txtMyMoodStatus;
 
+    // State management
+    private boolean isDataLoaded = false;
+    private String currentNote;
+    private String currentEmoji;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -55,9 +60,26 @@ public class MoodFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
-        db = FirebaseFirestore.getInstance();
-        me = FirebaseAuth.getInstance().getCurrentUser();
+        super.onViewCreated(v, s);
+        
+        // Initialize Firebase only if not already done
+        if (db == null) {
+            db = FirebaseFirestore.getInstance();
+        }
+        if (me == null) {
+            me = FirebaseAuth.getInstance().getCurrentUser();
+        }
 
+        initViews(v);
+        restoreState(s);
+
+        // Only initialize data if not already loaded
+        if (!isDataLoaded) {
+            initializeData();
+        }
+    }
+
+    private void initViews(@NonNull View v) {
         // Bind UI
         emojiGroup      = v.findViewById(R.id.emojiGroup);
         edtNote         = v.findViewById(R.id.edtNote);
@@ -68,13 +90,59 @@ public class MoodFragment extends Fragment {
         txtMyMoodStatus = v.findViewById(R.id.txtMyMoodStatus);
 
         // Header ngày
-        txtToday.setText("Mood hôm nay (" + todayStr("dd/MM/yyyy") + ")");
+        if (txtToday != null) {
+            txtToday.setText("Mood hôm nay (" + todayStr("dd/MM/yyyy") + ")");
+        }
 
         v.findViewById(R.id.btnSaveMood).setOnClickListener(x -> saveMood());
+        
+        // Restore UI state if available
+        if (currentNote != null && edtNote != null) {
+            edtNote.setText(currentNote);
+        }
+        if (currentEmoji != null && emojiGroup != null) {
+            restoreEmojiSelection(currentEmoji);
+        }
+    }
+
+    private void restoreState(@Nullable Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            isDataLoaded = savedInstanceState.getBoolean("isDataLoaded", false);
+            coupleId = savedInstanceState.getString("coupleId");
+            partnerUid = savedInstanceState.getString("partnerUid");
+            currentNote = savedInstanceState.getString("currentNote");
+            currentEmoji = savedInstanceState.getString("currentEmoji");
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("isDataLoaded", isDataLoaded);
+        if (coupleId != null) outState.putString("coupleId", coupleId);
+        if (partnerUid != null) outState.putString("partnerUid", partnerUid);
+        if (edtNote != null && edtNote.getText() != null) {
+            outState.putString("currentNote", edtNote.getText().toString());
+        }
+        if (emojiGroup != null) {
+            int checkedId = emojiGroup.getCheckedRadioButtonId();
+            if (checkedId != -1) {
+                RadioButton selectedRadio = emojiGroup.findViewById(checkedId);
+                if (selectedRadio != null) {
+                    outState.putString("currentEmoji", selectedRadio.getText().toString());
+                }
+            }
+        }
+    }
+
+    private void initializeData() {
+        if (!isAdded() || getContext() == null) return;
 
         // Lấy coupleId → fetch member → load/subscribe
         db.collection("users").document(me.getUid()).get()
                 .addOnSuccessListener(snap -> {
+                    if (!isAdded()) return;
+                    
                     coupleId = snap.getString("coupleId");
                     if (coupleId == null) {
                         toast("Bạn chưa thuộc cặp nào");
@@ -82,11 +150,18 @@ public class MoodFragment extends Fragment {
                     }
                     fetchPartnerThenStart();
                 })
-                .addOnFailureListener(e -> toast("Lỗi đọc user: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    toast("Lỗi đọc user: " + e.getMessage());
+                });
     }
 
     // ===== Helpers =====
-    private void toast(String s){ Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show(); }
+    private void toast(String s){ 
+        if (isAdded() && getContext() != null) {
+            Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show(); 
+        }
+    }
 
     private String todayStr(String fmt) {
         return new SimpleDateFormat(fmt, Locale.getDefault()).format(new Date());
@@ -103,13 +178,20 @@ public class MoodFragment extends Fragment {
 
     // ===== Save mood (merge theo entries.{uid}) =====
     private void saveMood() {
-        if (coupleId == null) return;
+        if (!isAdded() || coupleId == null || emojiGroup == null) return;
 
         int checkedId = emojiGroup.getCheckedRadioButtonId();
         if (checkedId == -1) { toast("Chọn emoji"); return; }
 
-        String emoji = ((RadioButton) emojiGroup.findViewById(checkedId)).getText().toString();
-        String note  = edtNote.getText().toString();
+        RadioButton selectedRadio = emojiGroup.findViewById(checkedId);
+        if (selectedRadio == null) return;
+        
+        String emoji = selectedRadio.getText().toString();
+        String note = (edtNote != null) ? edtNote.getText().toString() : "";
+        
+        // Save current state
+        currentEmoji = emoji;
+        currentNote = note;
 
         Map<String,Object> entry = new HashMap<>();
         entry.put("emoji", emoji);
@@ -123,13 +205,20 @@ public class MoodFragment extends Fragment {
 
         todayDocRef().set(data, SetOptions.merge())
                 .addOnSuccessListener(v -> {
+                    if (!isAdded()) return;
+                    
                     toast("Đã lưu mood");
                     updateMyMoodStatus(emoji, note);
                 })
-                .addOnFailureListener(e -> toast("Lỗi: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    toast("Lỗi: " + e.getMessage());
+                });
     }
 
     private void updateMyMoodStatus(String emoji, String note) {
+        if (!isAdded() || txtMyMoodStatus == null) return;
+        
         String status = "Mood của bạn: " + emoji;
         if (!TextUtils.isEmpty(note)) status += " - " + note.trim();
         txtMyMoodStatus.setText(status);
@@ -138,8 +227,11 @@ public class MoodFragment extends Fragment {
 
     // ===== Điền lại mood của mình nếu đã có =====
     private void loadMyMood() {
+        if (!isAdded()) return;
+        
         todayDocRef().get().addOnSuccessListener(snap -> {
-            if (!snap.exists()) return;
+            if (!isAdded() || !snap.exists()) return;
+            
             Map<String,Object> entries = (Map<String,Object>) snap.get("entries");
             if (entries == null) return;
             Map<String,Object> mine = (Map<String,Object>) entries.get(me.getUid());
@@ -148,27 +240,57 @@ public class MoodFragment extends Fragment {
             String emoji = (String) mine.get("emoji");
             String note  = (String) mine.get("note");
 
-            if (!TextUtils.isEmpty(note)) edtNote.setText(note);
-            if ("😊".equals(emoji))      emojiGroup.check(R.id.emojiHappy);
-            else if ("😐".equals(emoji)) emojiGroup.check(R.id.emojiNeutral);
-            else if ("😢".equals(emoji)) emojiGroup.check(R.id.emojiSad);
-            else if ("😠".equals(emoji)) emojiGroup.check(R.id.emojiAngry);
-            else if ("🥰".equals(emoji)) emojiGroup.check(R.id.emojiLove);
+            if (!TextUtils.isEmpty(note) && edtNote != null) {
+                edtNote.setText(note);
+                currentNote = note;
+            }
+            
+            if (!TextUtils.isEmpty(emoji) && emojiGroup != null) {
+                restoreEmojiSelection(emoji);
+                currentEmoji = emoji;
+            }
 
             updateMyMoodStatus(emoji, note);
         });
     }
 
+    private void restoreEmojiSelection(String emoji) {
+        if (emojiGroup == null || TextUtils.isEmpty(emoji)) return;
+        
+        if ("😊".equals(emoji))      emojiGroup.check(R.id.emojiHappy);
+        else if ("😐".equals(emoji)) emojiGroup.check(R.id.emojiNeutral);
+        else if ("😢".equals(emoji)) emojiGroup.check(R.id.emojiSad);
+        else if ("😠".equals(emoji)) emojiGroup.check(R.id.emojiAngry);
+        else if ("🥰".equals(emoji)) emojiGroup.check(R.id.emojiLove);
+    }
+
     // ===== Realtime mood người kia hôm nay =====
     private void watchPartnerMood() {
-        if (partnerListener != null) partnerListener.remove();
+        if (!isAdded()) return;
+        
+        // Remove existing listener to prevent duplicates
+        if (partnerListener != null) {
+            partnerListener.remove();
+            partnerListener = null;
+        }
 
         partnerListener = todayDocRef().addSnapshotListener((snap, e) -> {
-            if (e != null) { txtPartnerMood.setText("Lỗi quyền/kết nối"); return; }
-            if (snap == null || !snap.exists()) { txtPartnerMood.setText("Chưa có mood hôm nay"); return; }
+            if (!isAdded()) return; // Check if fragment is still attached
+            
+            if (e != null) { 
+                if (txtPartnerMood != null) txtPartnerMood.setText("Lỗi quyền/kết nối"); 
+                return; 
+            }
+            if (snap == null || !snap.exists()) { 
+                if (txtPartnerMood != null) txtPartnerMood.setText("Chưa có mood hôm nay"); 
+                return; 
+            }
 
             Map<String,Object> entries = (Map<String,Object>) snap.get("entries");
-            if (entries == null || entries.isEmpty()) { txtPartnerMood.setText("Chưa có mood hôm nay"); return; }
+            if (entries == null || entries.isEmpty()) { 
+                if (txtPartnerMood != null) txtPartnerMood.setText("Chưa có mood hôm nay"); 
+                return; 
+            }
 
             // Ưu tiên partnerUid; nếu null thì chọn uid khác mình trong entries
             String targetUid = partnerUid;
@@ -176,7 +298,8 @@ public class MoodFragment extends Fragment {
                 for (String uid : entries.keySet()) if (!uid.equals(me.getUid())) { targetUid = uid; break; }
             }
             if (TextUtils.isEmpty(targetUid) || !entries.containsKey(targetUid)) {
-                txtPartnerMood.setText("Chưa có mood hôm nay"); return;
+                if (txtPartnerMood != null) txtPartnerMood.setText("Chưa có mood hôm nay"); 
+                return;
             }
 
             Map<String,Object> m = (Map<String,Object>) entries.get(targetUid);
@@ -187,12 +310,14 @@ public class MoodFragment extends Fragment {
             if (!TextUtils.isEmpty(note) && !"null".equals(note)) {
                 moodText += "\n" + note.trim();
             }
-            txtPartnerMood.setText(moodText);
+            if (txtPartnerMood != null) txtPartnerMood.setText(moodText);
         });
     }
 
     // ===== Lịch sử 7 ngày: "dd/MM: my | partner" =====
     private void loadHistory7days() {
+        if (!isAdded()) return;
+        
         final SimpleDateFormat idFmt = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
         final SimpleDateFormat showFmt = new SimpleDateFormat("dd/MM", Locale.getDefault());
         Calendar cal = Calendar.getInstance();
@@ -205,6 +330,8 @@ public class MoodFragment extends Fragment {
                 .whereIn(FieldPath.documentId(), ids)
                 .get()
                 .addOnSuccessListener(snaps -> {
+                    if (!isAdded()) return;
+                    
                     List<DocumentSnapshot> list = new ArrayList<>(snaps.getDocuments());
                     list.sort((a,b) -> b.getId().compareTo(a.getId())); // mới → cũ
 
@@ -244,15 +371,25 @@ public class MoodFragment extends Fragment {
                         }
                         sb.append(": ").append(myEmoji).append(" | ").append(partnerEmoji).append("\n");
                     }
-                    txtHistory.setText(sb.toString());
+                    
+                    if (txtHistory != null) {
+                        txtHistory.setText(sb.toString());
+                    }
                 })
-                .addOnFailureListener(e -> txtHistory.setText("Không tải được lịch sử: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded() || txtHistory == null) return;
+                    txtHistory.setText("Không tải được lịch sử: " + e.getMessage());
+                });
     }
 
     // ===== Đọc partnerUid + tên rồi khởi động các luồng =====
     private void fetchPartnerThenStart() {
+        if (!isAdded()) return;
+        
         db.collection("couples").document(coupleId).get()
                 .addOnSuccessListener(cpl -> {
+                    if (!isAdded()) return;
+                    
                     List<String> members = (List<String>) cpl.get("members");
                     if (members != null) {
                         for (String uid : members) if (!uid.equals(me.getUid())) partnerUid = uid;
@@ -261,19 +398,27 @@ public class MoodFragment extends Fragment {
                     if (!TextUtils.isEmpty(partnerUid)) {
                         db.collection("users").document(partnerUid).get()
                                 .addOnSuccessListener(u -> {
+                                    if (!isAdded()) return;
+                                    
                                     // ưu tiên displayName; fallback email; cuối cùng "Người yêu"
                                     String name = nvl(u.getString("displayName"),
                                             nvl(u.getString("name"),
                                                     nvl(u.getString("email"), "Người yêu")));
-                                    txtPartnerName.setText("Mood của " + name);
+                                    if (txtPartnerName != null) {
+                                        txtPartnerName.setText("Mood của " + name);
+                                    }
                                 });
                     }
 
                     loadMyMood();
                     watchPartnerMood();
                     loadHistory7days();
+                    isDataLoaded = true; // Mark data as loaded
                 })
-                .addOnFailureListener(e -> toast("Lỗi đọc couple: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    toast("Lỗi đọc couple: " + e.getMessage());
+                });
     }
 
     private static String nvl(String s, String alt) { return TextUtils.isEmpty(s) ? alt : s; }
